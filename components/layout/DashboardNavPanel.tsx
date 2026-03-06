@@ -4,7 +4,7 @@ import Image from "next/image";
 import Logo from "@/public/images/logo.svg";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "../atoms";
+import { Button, PrettyBR } from "../atoms";
 
 const navigationTabs = [
     {
@@ -34,7 +34,9 @@ export const DashboardNavPanel = () => {
                         isCollapsed ? "w-16" : "w-55"
                     }`}
                 >
-                    <div className="flex items-center justify-between mb-4">
+                    <div
+                        className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}
+                    >
                         <Image
                             src={Logo}
                             alt="ZVS Logo"
@@ -60,6 +62,12 @@ export const DashboardNavPanel = () => {
                             />
                         </Button>
                     </div>
+
+                    <PrettyBR
+                        label={isCollapsed ? " " : "Навигация"}
+                        icon="mdi:menu"
+                    />
+
                     <nav className="space-y-2">
                         {navigationTabs.map((tab) => {
                             const isActive = tab.to === path;

@@ -72,18 +72,9 @@ export const StorageVectorsView = ({
     const [draftTagsStorageId, setDraftTagsStorageId] = useState("");
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-    const toTagIds = (tags: Array<{ id: string; name: string } | string>) =>
-        Array.from(
-            new Set(
-                tags
-                    .map((tag) =>
-                        typeof tag === "string" ? tag : (tag?.id ?? ""),
-                    )
-                    .filter((tagId) => Boolean(tagId)),
-            ),
-        );
-
-    const storageTagIds = toTagIds(selectedVectorStorage?.tags ?? []);
+    const storageTagIds = (selectedVectorStorage?.tags ?? []).map(
+        (tag) => tag.id,
+    );
 
     const effectiveSelectedTagIds =
         draftTagsStorageId === selectedVectorStorageId
@@ -96,7 +87,7 @@ export const StorageVectorsView = ({
             onSelectVectorStorage(created.id, created.name);
             setEditableVectorStorageName(created.name);
             setDraftTagsStorageId(created.id);
-            setSelectedTagIds(toTagIds(created.tags ?? []));
+            setSelectedTagIds((created.tags ?? []).map((tag) => tag.id));
         },
         onError: (error) => {
             toast.danger({
@@ -258,7 +249,9 @@ export const StorageVectorsView = ({
                                         );
                                         setDraftTagsStorageId(vectorStorage.id);
                                         setSelectedTagIds(
-                                            toTagIds(vectorStorage.tags ?? []),
+                                            (vectorStorage.tags ?? []).map(
+                                                (tag) => tag.id,
+                                            ),
                                         );
                                         onSelectVectorStorage(
                                             vectorStorage.id,

@@ -28,6 +28,31 @@ type AuthMutationOptions<TPayload> = Omit<
     "mutationFn"
 >;
 
+const toAuthUser = (value: unknown): AuthUser | null => {
+    if (!value || typeof value !== "object") {
+        return null;
+    }
+
+    const candidate = value as Partial<AuthUser>;
+
+    if (
+        typeof candidate.email !== "string" ||
+        !Array.isArray(candidate.roles) ||
+        typeof candidate.status !== "string"
+    ) {
+        return null;
+    }
+
+    return {
+        id: typeof candidate.id === "string" ? candidate.id : undefined,
+        email: candidate.email,
+        roles: candidate.roles.filter(
+            (role): role is string => typeof role === "string",
+        ),
+        status: candidate.status,
+    };
+};
+
 export const useRegister = (options?: AuthMutationOptions<RegisterBody>) => {
     const queryClient = useQueryClient();
     const { onSuccess: externalOnSuccess, ...restOptions } = options ?? {};
@@ -36,14 +61,12 @@ export const useRegister = (options?: AuthMutationOptions<RegisterBody>) => {
         mutationFn: api.auth.register,
         ...restOptions,
         onSuccess: (data, variables, onMutateResult, context) => {
-            userStore.setSession(
-                data.accessToken,
-                data.refreshToken,
-                data.user ?? null,
-            );
+            const user = toAuthUser(data.user);
 
-            if (data.user) {
-                queryClient.setQueryData(AUTH_ME_QUERY_KEY, data.user);
+            userStore.setSession(data.accessToken, data.refreshToken, user);
+
+            if (user) {
+                queryClient.setQueryData(AUTH_ME_QUERY_KEY, user);
             } else {
                 void queryClient.invalidateQueries({
                     queryKey: AUTH_ME_QUERY_KEY,
@@ -63,14 +86,12 @@ export const useLogin = (options?: AuthMutationOptions<LoginBody>) => {
         mutationFn: api.auth.login,
         ...restOptions,
         onSuccess: (data, variables, onMutateResult, context) => {
-            userStore.setSession(
-                data.accessToken,
-                data.refreshToken,
-                data.user ?? null,
-            );
+            const user = toAuthUser(data.user);
 
-            if (data.user) {
-                queryClient.setQueryData(AUTH_ME_QUERY_KEY, data.user);
+            userStore.setSession(data.accessToken, data.refreshToken, user);
+
+            if (user) {
+                queryClient.setQueryData(AUTH_ME_QUERY_KEY, user);
             } else {
                 void queryClient.invalidateQueries({
                     queryKey: AUTH_ME_QUERY_KEY,

@@ -190,7 +190,7 @@ export default function StoragePage() {
         if (!selectedVectorStorage) return [];
 
         const tagNames = selectedVectorStorage.tags.map((tag) =>
-            (typeof tag === "string" ? tag : (tag.name ?? "")).toLowerCase(),
+            tag.name.toLowerCase(),
         );
 
         return files.filter((file) => {

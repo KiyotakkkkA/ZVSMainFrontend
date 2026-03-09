@@ -25,4 +25,6 @@ export type PreparedVectorFile = {
     localId: string;
     name: string;
     source: "upload" | "storage";
+    file?: File;
+    storageFileId?: string;
 };

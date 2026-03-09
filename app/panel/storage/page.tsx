@@ -6,11 +6,18 @@ import type {
     ProjectRef,
     StoredFile,
     StorageView,
-    VectorStorage,
 } from "@/components/molecules/storage/types";
 import { StorageFilesView } from "@/components/organisms/storage/StorageFilesView";
 import { StorageModals } from "@/components/organisms/storage/StorageModals";
 import { StorageVectorsView } from "@/components/organisms/storage/StorageVectorsView";
+import {
+    useDeleteVectorStorage,
+    useRunVectorEmbeddings,
+    useVectorStorageTags,
+    useVectorStorages,
+} from "@/hooks/useStorage";
+import { useToast } from "@/hooks/useToast";
+import { useUpload } from "@/hooks/useUpload";
 
 const STORAGE_VIEW_OPTIONS = [
     { value: "files", label: "Файлы" },
@@ -43,33 +50,6 @@ const MOCK_FILES: StoredFile[] = [
     },
 ];
 
-const MOCK_VECTOR_STORAGES: VectorStorage[] = [
-    {
-        id: "vec-1",
-        name: "База договоров",
-        createdAt: "2026-03-05T10:00:00.000Z",
-        lastActiveAt: "2026-03-06T07:30:00.000Z",
-        size: 93_184_000,
-        tags: ["contracts", "legal"],
-    },
-    {
-        id: "vec-2",
-        name: "Справочник FAQ",
-        createdAt: "2026-03-04T15:20:00.000Z",
-        lastActiveAt: "2026-03-06T08:10:00.000Z",
-        size: 48_200_000,
-        tags: ["faq", "support"],
-    },
-];
-
-const VECTOR_TAG_OPTIONS = [
-    { value: "contracts", label: "Contracts" },
-    { value: "legal", label: "Legal" },
-    { value: "faq", label: "FAQ" },
-    { value: "support", label: "Support" },
-    { value: "docs", label: "Docs" },
-];
-
 const formatDateTime = (dateValue: string) => {
     return new Intl.DateTimeFormat("ru-RU", {
         dateStyle: "short",
@@ -88,24 +68,19 @@ const formatFileSize = (size: number) => {
 };
 
 export default function StoragePage() {
+    const toast = useToast();
     const [activeView, setActiveView] = useState<StorageView>("files");
     const [files, setFiles] = useState<StoredFile[]>(MOCK_FILES);
-    const [vectorStorages, setVectorStorages] =
-        useState<VectorStorage[]>(MOCK_VECTOR_STORAGES);
 
     const [selectedFileId, setSelectedFileId] = useState<string>(
         MOCK_FILES[0]?.id ?? "",
     );
     const [selectedVectorStorageId, setSelectedVectorStorageId] =
-        useState<string>(MOCK_VECTOR_STORAGES[0]?.id ?? "");
+        useState<string>("");
 
     const [fileSearchQuery, setFileSearchQuery] = useState("");
     const [vectorSearchQuery, setVectorSearchQuery] = useState("");
     const [vectorTagFilters, setVectorTagFilters] = useState<string[]>([]);
-    const [newVectorTagName, setNewVectorTagName] = useState("");
-    const [editableVectorStorageName, setEditableVectorStorageName] = useState(
-        MOCK_VECTOR_STORAGES[0]?.name ?? "",
-    );
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [isStorageFilesPickOpen, setIsStorageFilesPickOpen] = useState(false);
     const [pickedStorageFileIds, setPickedStorageFileIds] = useState<string[]>(
@@ -113,25 +88,63 @@ export default function StoragePage() {
     );
     const [storageFilesSearchQuery, setStorageFilesSearchQuery] = useState("");
 
-    const [isUploading] = useState(false);
     const [isPickingPath] = useState(false);
-    const [isVectorStorageNameSaving] = useState(false);
-    const [isVectorTagSaving] = useState(false);
+
+    const { data: vectorStorages = [] } = useVectorStorages(
+        {
+            name: vectorSearchQuery,
+            tagIds: vectorTagFilters,
+        },
+        {
+            enabled: activeView === "vectors",
+        },
+    );
+
+    const { data: vectorStorageTags = [] } = useVectorStorageTags({
+        enabled: activeView === "vectors",
+    });
+
+    const vectorTagOptions = useMemo(
+        () =>
+            vectorStorageTags.map((tag) => ({
+                value: tag.id,
+                label: tag.name,
+            })),
+        [vectorStorageTags],
+    );
+
+    const deleteVectorStorageMutation = useDeleteVectorStorage({
+        onSuccess: () => {
+            setSelectedVectorStorageId("");
+            setIsDeleteConfirmOpen(false);
+            toast.success({ title: "Хранилище удалено" });
+        },
+        onError: (error) => {
+            toast.danger({
+                title: "Не удалось удалить хранилище",
+                description: error.message,
+            });
+        },
+    });
+
+    const runVectorEmbeddingsMutation = useRunVectorEmbeddings({
+        onSuccess: () => {
+            toast.success({ title: "Индексация запущена" });
+        },
+        onError: (error) => {
+            toast.danger({
+                title: "Не удалось запустить индексацию",
+                description: error.message,
+            });
+        },
+    });
+
+    const activeSelectedVectorStorageId =
+        selectedVectorStorageId || vectorStorages[0]?.id || "";
 
     const [preparedVectorFiles, setPreparedVectorFiles] = useState<
         PreparedVectorFile[]
-    >([
-        {
-            localId: "pf-1",
-            name: "knowledge_base.pdf",
-            source: "storage",
-        },
-        {
-            localId: "pf-2",
-            name: "contract_template.docx",
-            source: "upload",
-        },
-    ]);
+    >([]);
 
     const projectRefByFileId = useMemo(() => {
         return files.reduce<Record<string, ProjectRef | undefined>>(
@@ -155,12 +168,8 @@ export default function StoragePage() {
             ? projectRefByFileId[selectedFile.id]
             : undefined;
 
-    const selectedVectorStorage = useMemo(
-        () =>
-            vectorStorages.find(
-                (vectorStorage) => vectorStorage.id === selectedVectorStorageId,
-            ),
-        [vectorStorages, selectedVectorStorageId],
+    const selectedVectorStorage = vectorStorages.find(
+        (vectorStorage) => vectorStorage.id === activeSelectedVectorStorageId,
     );
 
     const filteredFiles = useMemo(() => {
@@ -175,24 +184,7 @@ export default function StoragePage() {
         );
     }, [files, fileSearchQuery]);
 
-    const filteredVectorStorages = useMemo(() => {
-        const query = vectorSearchQuery.trim().toLowerCase();
-
-        return vectorStorages.filter((vectorStorage) => {
-            const matchesQuery =
-                !query ||
-                vectorStorage.name.toLowerCase().includes(query) ||
-                vectorStorage.id.toLowerCase().includes(query);
-
-            const matchesTags =
-                vectorTagFilters.length === 0 ||
-                vectorTagFilters.every((tagId) =>
-                    vectorStorage.tags.includes(tagId),
-                );
-
-            return matchesQuery && matchesTags;
-        });
-    }, [vectorSearchQuery, vectorStorages, vectorTagFilters]);
+    const filteredVectorStorages = vectorStorages;
 
     const containedFiles = useMemo(() => {
         if (!selectedVectorStorage) return [];
@@ -212,13 +204,10 @@ export default function StoragePage() {
         return preparedVectorFiles
             .filter((file) => file.source === "storage")
             .map((file) => {
-                const found = files.find(
-                    (stored) => stored.originalName === file.name,
-                );
-                return found?.id;
+                return file.storageFileId;
             })
             .filter((id): id is string => Boolean(id));
-    }, [preparedVectorFiles, files]);
+    }, [preparedVectorFiles]);
 
     const filteredStorageFilesForPick = useMemo(() => {
         const query = storageFilesSearchQuery.trim().toLowerCase();
@@ -233,8 +222,6 @@ export default function StoragePage() {
             file.originalName.toLowerCase().includes(query),
         );
     }, [files, storageFilesSearchQuery]);
-
-    const vectorTagOptions = VECTOR_TAG_OPTIONS;
 
     const openSelectedFile = async () => {
         console.log("openSelectedFile fallback", { selectedFileId });
@@ -255,114 +242,73 @@ export default function StoragePage() {
     };
 
     const runVectorization = async () => {
-        console.log("runVectorization fallback", {
-            selectedVectorStorageId,
-            preparedVectorFiles,
+        if (!activeSelectedVectorStorageId) {
+            toast.warning({ title: "Выберите векторное хранилище" });
+            return;
+        }
+
+        runVectorEmbeddingsMutation.mutate({
+            vstoreUuid: activeSelectedVectorStorageId,
+            documents: preparedVectorFiles,
         });
     };
 
     const addFilesFromExplorer = async () => {
-        console.log("addFilesFromExplorer fallback");
-        setPreparedVectorFiles((prev) => [
-            ...prev,
-            {
-                localId: crypto.randomUUID(),
-                name: `new_file_${prev.length + 1}.pdf`,
-                source: "upload",
-            },
-        ]);
+        openFileDialog();
     };
 
-    const createVectorStorage = async () => {
-        console.log("createVectorStorage fallback");
-        const next: VectorStorage = {
-            id: `vec-${Date.now()}`,
-            name: "Новое хранилище",
-            createdAt: new Date().toISOString(),
-            lastActiveAt: new Date().toISOString(),
-            size: 0,
-            tags: [],
-        };
+    const {
+        inputRef,
+        accept,
+        multiple,
+        isUploading,
+        openFileDialog,
+        handleInputChange,
+    } = useUpload({
+        onFilesSelected: (pickedFiles) => {
+            setPreparedVectorFiles((prev) => {
+                const next = [...prev];
 
-        setVectorStorages((prev) => [next, ...prev]);
-        setSelectedVectorStorageId(next.id);
-        setEditableVectorStorageName(next.name);
-    };
+                pickedFiles.forEach((file) => {
+                    const alreadyExists = next.some(
+                        (preparedFile) =>
+                            preparedFile.source === "upload" &&
+                            preparedFile.name === file.name,
+                    );
+
+                    if (!alreadyExists) {
+                        next.push({
+                            localId: crypto.randomUUID(),
+                            name: file.name,
+                            source: "upload",
+                            file,
+                        });
+                    }
+                });
+
+                return next;
+            });
+
+            toast.success({
+                title: "Файлы добавлены",
+                description: `Добавлено: ${pickedFiles.length}`,
+            });
+        },
+        onRejectedFiles: (rejectedFiles) => {
+            toast.warning({
+                title: "Некоторые файлы пропущены",
+                description: `Поддерживаются только PDF и DOCX. Пропущено: ${rejectedFiles.length}`,
+            });
+        },
+    });
 
     const openDeleteConfirmModal = () => {
         setIsDeleteConfirmOpen(true);
     };
 
-    const confirmDeleteVectorStorage = async () => {
-        console.log("confirmDeleteVectorStorage fallback", {
-            selectedVectorStorageId,
-        });
-        setVectorStorages((prev) =>
-            prev.filter(
-                (vectorStorage) => vectorStorage.id !== selectedVectorStorageId,
-            ),
-        );
-        setSelectedVectorStorageId("");
-        setIsDeleteConfirmOpen(false);
-    };
-
-    const saveVectorStorageName = async () => {
-        console.log("saveVectorStorageName fallback", {
-            selectedVectorStorageId,
-            editableVectorStorageName,
-        });
-
-        setVectorStorages((prev) =>
-            prev.map((vectorStorage) =>
-                vectorStorage.id === selectedVectorStorageId
-                    ? { ...vectorStorage, name: editableVectorStorageName }
-                    : vectorStorage,
-            ),
-        );
-    };
-
-    const createStorageTag = async () => {
-        if (!newVectorTagName.trim() || !selectedVectorStorageId) return;
-
-        console.log("createStorageTag fallback", {
-            selectedVectorStorageId,
-            newVectorTagName,
-        });
-
-        setVectorStorages((prev) =>
-            prev.map((vectorStorage) => {
-                if (vectorStorage.id !== selectedVectorStorageId) {
-                    return vectorStorage;
-                }
-
-                const normalized = newVectorTagName.trim().toLowerCase();
-                const hasTag = vectorStorage.tags.includes(normalized);
-
-                return hasTag
-                    ? vectorStorage
-                    : {
-                          ...vectorStorage,
-                          tags: [...vectorStorage.tags, normalized],
-                      };
-            }),
-        );
-
-        setNewVectorTagName("");
-    };
-
-    const updateSelectedStorageTags = async (nextTagIds: string[]) => {
-        console.log("updateSelectedStorageTags fallback", {
-            selectedVectorStorageId,
-            nextTagIds,
-        });
-
-        setVectorStorages((prev) =>
-            prev.map((vectorStorage) =>
-                vectorStorage.id === selectedVectorStorageId
-                    ? { ...vectorStorage, tags: nextTagIds }
-                    : vectorStorage,
-            ),
-        );
+    const confirmDeleteVectorStorage = () => {
+        if (!activeSelectedVectorStorageId) return;
+        deleteVectorStorageMutation.mutate(activeSelectedVectorStorageId);
     };
 
     const removePreparedFile = (localId: string) => {
@@ -402,6 +348,7 @@ export default function StoragePage() {
                         localId: crypto.randomUUID(),
                         name: file.originalName,
                         source: "storage",
+                        storageFileId: file.id,
                     });
                 }
             });
@@ -413,6 +360,15 @@ export default function StoragePage() {
 
     return (
         <section className="animate-page-fade-in flex min-w-0 flex-1 flex-col gap-3 rounded-3xl bg-main-900/70 p-4 backdrop-blur-md">
+            <input
+                ref={inputRef}
+                type="file"
+                accept={accept}
+                multiple={multiple}
+                onChange={handleInputChange}
+                className="hidden"
+            />
+
             <StorageViewSwitcher
                 activeView={activeView}
                 options={STORAGE_VIEW_OPTIONS}
@@ -445,10 +401,9 @@ export default function StoragePage() {
                     vectorTagFilters={vectorTagFilters}
                     onVectorTagFiltersChange={setVectorTagFilters}
                     filteredVectorStorages={filteredVectorStorages}
-                    selectedVectorStorageId={selectedVectorStorageId}
-                    onSelectVectorStorage={(vectorStorageId, name) => {
+                    selectedVectorStorageId={activeSelectedVectorStorageId}
+                    onSelectVectorStorage={(vectorStorageId) => {
                         setSelectedVectorStorageId(vectorStorageId);
-                        setEditableVectorStorageName(name);
                     }}
                     formatDateTime={formatDateTime}
                     selectedVectorStorage={selectedVectorStorage}
@@ -458,33 +413,15 @@ export default function StoragePage() {
                     onAddFilesFromExplorer={() => {
                         void addFilesFromExplorer();
                     }}
-                    isUploading={isUploading}
+                    isUploading={
+                        isUploading || runVectorEmbeddingsMutation.isPending
+                    }
                     onOpenStorageFilesPick={() => {
                         setPickedStorageFileIds(preparedStorageFileIds);
                         setIsStorageFilesPickOpen(true);
                     }}
                     isPickingPath={isPickingPath}
-                    onCreateVectorStorage={() => {
-                        void createVectorStorage();
-                    }}
                     onOpenDeleteConfirmModal={openDeleteConfirmModal}
-                    editableVectorStorageName={editableVectorStorageName}
-                    onEditableVectorStorageNameChange={
-                        setEditableVectorStorageName
-                    }
-                    onSaveVectorStorageName={() => {
-                        void saveVectorStorageName();
-                    }}
-                    isVectorStorageNameSaving={isVectorStorageNameSaving}
-                    newVectorTagName={newVectorTagName}
-                    onNewVectorTagNameChange={setNewVectorTagName}
-                    onCreateStorageTag={() => {
-                        void createStorageTag();
-                    }}
-                    isVectorTagSaving={isVectorTagSaving}
-                    onUpdateSelectedStorageTags={(nextTagIds) => {
-                        void updateSelectedStorageTags(nextTagIds);
-                    }}
                     formatFileSize={formatFileSize}
                     preparedVectorFiles={preparedVectorFiles}
                     onRemovePreparedFile={removePreparedFile}

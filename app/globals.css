@@ -24,3 +24,18 @@ body {
     background: var(--color-main-900);
     color: #fff;
 }
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(160, 161, 165, 0.4) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(160, 161, 165, 0.4);
+    border-radius: 999px;
+}

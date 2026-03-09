@@ -1,4 +1,14 @@
 import { userStore } from "@/stores/userStore";
+import type {
+    CreateVectorStorageBody,
+    CreateVectorStorageTagBody,
+    ListVectorStoragesParams,
+    UpdateVectorStorageBody,
+    VectorStorageListResponse,
+    VectorStorageResponse,
+    VectorStorageTagDTO,
+    VectorStorageTagsResponse,
+} from "@/dto/vector-storage.dto";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -201,6 +211,18 @@ export type AuthSessionsResponse = {
     sessions: AuthSession[];
 };
 
+export type {
+    CreateVectorStorageBody,
+    CreateVectorStorageTagBody,
+    ListVectorStoragesParams,
+    UpdateVectorStorageBody,
+    VectorStorageDTO,
+    VectorStorageListResponse,
+    VectorStorageResponse,
+    VectorStorageTagDTO,
+    VectorStorageTagsResponse,
+} from "@/dto/vector-storage.dto";
+
 export const api = {
     auth: {
         register: (payload: RegisterBody) =>
@@ -245,6 +267,65 @@ export const api = {
             request<void>({
                 method: "DELETE",
                 endpoint: `/auth/sessions/${sessionId}`,
+                auth: true,
+            }),
+    },
+
+    vectorStorage: {
+        list: (params?: ListVectorStoragesParams) => {
+            const searchParams = new URLSearchParams();
+
+            if (params?.name?.trim()) {
+                searchParams.set("name", params.name.trim());
+            }
+
+            if (params?.tagIds?.length) {
+                params.tagIds.forEach((tagId) => {
+                    if (tagId) {
+                        searchParams.append("tagIds", tagId);
+                    }
+                });
+            }
+
+            const query = searchParams.toString();
+
+            return request<VectorStorageListResponse>({
+                method: "GET",
+                endpoint: query ? `/vstorages?${query}` : "/vstorages",
+                auth: true,
+            });
+        },
+        create: (payload: CreateVectorStorageBody) =>
+            request<VectorStorageResponse>({
+                method: "POST",
+                endpoint: "/vstorages",
+                data: payload,
+                auth: true,
+            }),
+        update: (id: string, payload: UpdateVectorStorageBody) =>
+            request<VectorStorageResponse>({
+                method: "PUT",
+                endpoint: `/vstorages/${encodeURIComponent(id)}`,
+                data: payload,
+                auth: true,
+            }),
+        delete: (id: string) =>
+            request<void>({
+                method: "DELETE",
+                endpoint: `/vstorages/${encodeURIComponent(id)}`,
+                auth: true,
+            }),
+        listTags: () =>
+            request<VectorStorageTagsResponse>({
+                method: "GET",
+                endpoint: "/vstorages/tags",
+                auth: true,
+            }),
+        createTag: (payload: CreateVectorStorageTagBody) =>
+            request<VectorStorageTagDTO>({
+                method: "POST",
+                endpoint: "/vstorages/tags",
+                data: payload,
                 auth: true,
             }),
     },

@@ -4,6 +4,12 @@ import {
     InputSmall,
     PrettyBR,
 } from "@/components/atoms";
+import {
+    useCreateVectorStorage,
+    useCreateVectorStorageTags,
+    useUpdateVectorStorage,
+} from "@/hooks/useStorage";
+import { useToast } from "@/hooks/useToast";
 import { PreparedVectorFileItem } from "@/components/molecules/storage/PreparedVectorFileItem";
 import { VectorStorageItem } from "@/components/molecules/storage/VectorStorageItem";
 import type {
@@ -12,6 +18,7 @@ import type {
     VectorStorage,
 } from "@/components/molecules/storage/types";
 import { Icon } from "@iconify/react";
+import { useState } from "react";
 
 type StorageVectorsViewProps = {
     vectorSearchQuery: string;
@@ -29,17 +36,7 @@ type StorageVectorsViewProps = {
     isUploading: boolean;
     onOpenStorageFilesPick: () => void;
     isPickingPath: boolean;
-    onCreateVectorStorage: () => void;
     onOpenDeleteConfirmModal: () => void;
-    editableVectorStorageName: string;
-    onEditableVectorStorageNameChange: (value: string) => void;
-    onSaveVectorStorageName: () => void;
-    isVectorStorageNameSaving: boolean;
-    newVectorTagName: string;
-    onNewVectorTagNameChange: (value: string) => void;
-    onCreateStorageTag: () => void;
-    isVectorTagSaving: boolean;
-    onUpdateSelectedStorageTags: (nextTagIds: string[]) => void;
     formatFileSize: (size: number) => string;
     preparedVectorFiles: PreparedVectorFile[];
     onRemovePreparedFile: (localId: string) => void;
@@ -61,22 +58,164 @@ export const StorageVectorsView = ({
     onAddFilesFromExplorer,
     isUploading,
     onOpenStorageFilesPick,
-    onCreateVectorStorage,
     onOpenDeleteConfirmModal,
-    editableVectorStorageName,
-    onEditableVectorStorageNameChange,
-    onSaveVectorStorageName,
-    isVectorStorageNameSaving,
-    newVectorTagName,
-    onNewVectorTagNameChange,
-    onCreateStorageTag,
-    isVectorTagSaving,
-    onUpdateSelectedStorageTags,
     formatFileSize,
     preparedVectorFiles,
     onRemovePreparedFile,
     containedFiles,
 }: StorageVectorsViewProps) => {
+    const toast = useToast();
+    const [editableVectorStorageName, setEditableVectorStorageName] =
+        useState("");
+    const [newVectorTagName, setNewVectorTagName] = useState("");
+    const [draftTagsStorageId, setDraftTagsStorageId] = useState("");
+    const [draftTagIds, setDraftTagIds] = useState<string[]>([]);
+
+    const selectedTagIds =
+        draftTagsStorageId === selectedVectorStorageId
+            ? draftTagIds
+            : (selectedVectorStorage?.tags ?? []);
+
+    const createVectorStorageMutation = useCreateVectorStorage({
+        onSuccess: (created) => {
+            toast.success({ title: "Хранилище создано" });
+            onSelectVectorStorage(created.id, created.name);
+            setEditableVectorStorageName(created.name);
+            setDraftTagsStorageId(created.id);
+            setDraftTagIds(created.tags ?? []);
+        },
+        onError: (error) => {
+            toast.danger({
+                title: "Не удалось создать хранилище",
+                description: error.message,
+            });
+        },
+    });
+
+    const updateVectorStorageMutation = useUpdateVectorStorage({
+        onSuccess: (updated) => {
+            toast.success({ title: "Хранилище обновлено" });
+            onSelectVectorStorage(updated.id, updated.name);
+            setEditableVectorStorageName(updated.name);
+        },
+        onError: (error) => {
+            toast.danger({
+                title: "Ошибка обновления",
+                description: error.message,
+            });
+        },
+    });
+
+    const createVectorStorageTagsMutation = useCreateVectorStorageTags({
+        onSuccess: (createdTag) => {
+            if (!selectedVectorStorageId) {
+                setNewVectorTagName("");
+                return;
+            }
+
+            const currentTagIds = selectedTagIds;
+            const nextTagIds = Array.from(
+                new Set([...currentTagIds, createdTag.id]),
+            );
+            const nextName =
+                editableVectorStorageName.trim() ||
+                selectedVectorStorage?.name ||
+                "";
+
+            if (!nextName) {
+                setNewVectorTagName("");
+                return;
+            }
+
+            updateVectorStorageMutation.mutate({
+                id: selectedVectorStorageId,
+                name: nextName,
+                tagIds: nextTagIds,
+            });
+
+            setDraftTagsStorageId(selectedVectorStorageId);
+            setDraftTagIds(nextTagIds);
+
+            setNewVectorTagName("");
+            toast.success({ title: "Тег создан и назначен" });
+        },
+        onError: (error) => {
+            toast.danger({
+                title: "Не удалось создать тег",
+                description: error.message,
+            });
+        },
+    });
+
+    const saveVectorStorageName = () => {
+        if (!selectedVectorStorageId) return;
+
+        const nextName =
+            editableVectorStorageName.trim() || selectedVectorStorage?.name;
+
+        if (!nextName) {
+            toast.warning({ title: "Укажите название хранилища" });
+            return;
+        }
+
+        updateVectorStorageMutation.mutate({
+            id: selectedVectorStorageId,
+            name: nextName,
+            tagIds: selectedTagIds,
+        });
+    };
+
+    const createStorageTag = () => {
+        if (!newVectorTagName.trim()) {
+            toast.warning({ title: "Введите название тега" });
+            return;
+        }
+
+        createVectorStorageTagsMutation.mutate({
+            name: newVectorTagName.trim(),
+        });
+    };
+
+    const updateSelectedStorageTags = (nextTagIds: string[]) => {
+        if (!selectedVectorStorageId) return;
+
+        const nextName =
+            editableVectorStorageName.trim() || selectedVectorStorage?.name;
+
+        if (!nextName) return;
+
+        const currentTagIds = selectedTagIds;
+        let normalizedTagIds = nextTagIds;
+
+        // Some selector builds emit only the changed tag instead of full selection.
+        if (nextTagIds.length <= 1 && currentTagIds.length > 0) {
+            const changedTagId = nextTagIds[0];
+
+            if (!changedTagId) {
+                normalizedTagIds = [];
+            } else if (currentTagIds.includes(changedTagId)) {
+                normalizedTagIds = currentTagIds.filter(
+                    (tagId) => tagId !== changedTagId,
+                );
+            } else {
+                normalizedTagIds = [...currentTagIds, changedTagId];
+            }
+        }
+
+        setDraftTagsStorageId(selectedVectorStorageId);
+        setDraftTagIds(normalizedTagIds);
+
+        updateVectorStorageMutation.mutate({
+            id: selectedVectorStorageId,
+            name: nextName,
+            tagIds: normalizedTagIds,
+        });
+    };
+
+    const createVectorStorage = () => {
+        createVectorStorageMutation.mutate({ name: "Новое хранилище" });
+    };
+
     return (
         <div className="min-h-0 flex-1 rounded-2xl bg-main-900/60">
             <div className="grid h-full min-h-0 grid-cols-[360px_1fr] gap-3">
@@ -106,12 +245,19 @@ export const StorageVectorsView = ({
                                         selectedVectorStorageId
                                     }
                                     formatDateTime={formatDateTime}
-                                    onClick={() =>
+                                    onClick={() => {
+                                        setEditableVectorStorageName(
+                                            vectorStorage.name,
+                                        );
+                                        setDraftTagsStorageId(vectorStorage.id);
+                                        setDraftTagIds(
+                                            vectorStorage.tags ?? [],
+                                        );
                                         onSelectVectorStorage(
                                             vectorStorage.id,
                                             vectorStorage.name,
-                                        )
-                                    }
+                                        );
+                                    }}
                                 />
                             ))
                         ) : (
@@ -170,7 +316,8 @@ export const StorageVectorsView = ({
                                 variant="primary"
                                 shape="rounded-full"
                                 className="h-8 px-3 text-xs gap-2"
-                                onClick={onCreateVectorStorage}
+                                onClick={createVectorStorage}
+                                disabled={createVectorStorageMutation.isPending}
                             >
                                 <Icon icon="mdi:plus" width={18} />
                                 <span>Создать новое</span>
@@ -195,9 +342,12 @@ export const StorageVectorsView = ({
                                 </p>
                                 <div className="mt-2 flex items-center gap-2">
                                     <InputSmall
-                                        value={editableVectorStorageName}
+                                        value={
+                                            editableVectorStorageName ||
+                                            selectedVectorStorage.name
+                                        }
                                         onChange={(event) =>
-                                            onEditableVectorStorageNameChange(
+                                            setEditableVectorStorageName(
                                                 event.target.value,
                                             )
                                         }
@@ -207,8 +357,10 @@ export const StorageVectorsView = ({
                                         variant="primary"
                                         shape="rounded-lg"
                                         className="h-9 shrink-0 px-3 text-xs"
-                                        onClick={onSaveVectorStorageName}
-                                        disabled={isVectorStorageNameSaving}
+                                        onClick={saveVectorStorageName}
+                                        disabled={
+                                            updateVectorStorageMutation.isPending
+                                        }
                                     >
                                         Сохранить
                                     </Button>
@@ -222,7 +374,7 @@ export const StorageVectorsView = ({
                                     <InputSmall
                                         value={newVectorTagName}
                                         onChange={(event) =>
-                                            onNewVectorTagNameChange(
+                                            setNewVectorTagName(
                                                 event.target.value,
                                             )
                                         }
@@ -232,8 +384,10 @@ export const StorageVectorsView = ({
                                         variant="secondary"
                                         shape="rounded-lg"
                                         className="h-9 shrink-0 px-3 text-xs"
-                                        onClick={onCreateStorageTag}
-                                        disabled={isVectorTagSaving}
+                                        onClick={createStorageTag}
+                                        disabled={
+                                            createVectorStorageTagsMutation.isPending
+                                        }
                                     >
                                         Добавить тег
                                     </Button>
@@ -241,8 +395,8 @@ export const StorageVectorsView = ({
                                 <AutoFillSelector
                                     className="mt-3"
                                     options={vectorTagOptions}
-                                    value={selectedVectorStorage.tags}
-                                    onChange={onUpdateSelectedStorageTags}
+                                    value={selectedTagIds}
+                                    onChange={updateSelectedStorageTags}
                                     placeholder="Назначьте теги хранилищу"
                                 />
                             </div>

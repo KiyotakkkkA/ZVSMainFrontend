@@ -27,6 +27,7 @@ const browserIcons: Record<string, string> = {
     Safari: "mdi:safari",
     Edge: "mdi:microsoft-edge",
     Opera: "mdi:opera",
+    "ZVS Assistant": "mdi:robot",
     Unknown: "mdi:web",
 };
 

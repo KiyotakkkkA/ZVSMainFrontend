@@ -13,13 +13,11 @@ export const StorageViewSwitcher = ({
     onChange,
 }: StorageViewSwitcherProps) => {
     return (
-        <div className="rounded-2xl border border-main-700/70 bg-main-900/60 p-3">
+        <div className="rounded-2xl bg-main-900/60">
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h2 className="text-lg font-semibold text-main-100">
-                        Хранилище
-                    </h2>
-                </div>
+                <h2 className="text-lg font-semibold text-main-100">
+                    Хранилище
+                </h2>
             </div>
 
             <div className="mt-4">

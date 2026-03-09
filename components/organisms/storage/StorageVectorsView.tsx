@@ -2,6 +2,7 @@ import {
     AutoFillSelector,
     Button,
     InputSmall,
+    Loader,
     PrettyBR,
 } from "@/components/atoms";
 import {
@@ -285,11 +286,15 @@ export const StorageVectorsView = ({
                                 className="h-8 px-3 text-xs gap-2"
                                 onClick={onRunVectorization}
                             >
-                                <Icon
-                                    icon="mdi:play"
-                                    width={18}
-                                    className="text-main-900"
-                                />
+                                {isUploading ? (
+                                    <Loader className="bg-main-900" />
+                                ) : (
+                                    <Icon
+                                        icon="mdi:play"
+                                        width={18}
+                                        className="text-main-900"
+                                    />
+                                )}
                                 <span className="text-main-900">Индекс</span>
                             </Button>
                             <Button
@@ -436,7 +441,7 @@ export const StorageVectorsView = ({
                                 icon="mdi:database"
                             />
 
-                            <div className="mt-4 rounded-xl border border-main-700/70 bg-main-900/45 p-3">
+                            <div className="mt-4 rounded-xl bg-main-900/45">
                                 <h4 className="text-sm font-semibold text-main-100">
                                     Подготовленные файлы
                                 </h4>
@@ -452,13 +457,13 @@ export const StorageVectorsView = ({
                                     ) : (
                                         <div className="flex h-20 items-center justify-center text-xs text-main-400">
                                             Добавьте PDF/DOCX файлы для
-                                            векторизации.
+                                            индексации.
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="mt-4 rounded-xl border border-main-700/70 bg-main-900/45 p-3">
+                            <div className="mt-4 rounded-xl bg-main-900/45">
                                 <h4 className="text-sm font-semibold text-main-100">
                                     Содержащиеся файлы
                                 </h4>

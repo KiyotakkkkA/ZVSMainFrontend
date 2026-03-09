@@ -24,7 +24,7 @@ export const PreparedVectorFileItem = ({
                     </p>
                 </div>
                 <Button
-                    variant="secondary"
+                    variant="danger"
                     shape="rounded-lg"
                     className="h-7 w-7"
                     onClick={() => onRemove(file.localId)}

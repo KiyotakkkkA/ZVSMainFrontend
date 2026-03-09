@@ -15,7 +15,6 @@ type StorageFilesViewProps = {
     selectedFile?: StoredFile;
     selectedFileProjectRef?: ProjectRef;
     onOpenSelectedFile: () => void;
-    onOpenSelectedFileProject: () => void;
     onDeleteSelectedFile: () => void;
 };
 
@@ -29,7 +28,6 @@ export const StorageFilesView = ({
     selectedFile,
     selectedFileProjectRef,
     onOpenSelectedFile,
-    onOpenSelectedFileProject,
     onDeleteSelectedFile,
 }: StorageFilesViewProps) => {
     return (
@@ -86,14 +84,6 @@ export const StorageFilesView = ({
                                         onClick={onOpenSelectedFile}
                                     >
                                         <span>Открыть файл</span>
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        shape="rounded-lg"
-                                        className="h-8 px-3 text-xs"
-                                        onClick={onOpenSelectedFileProject}
-                                    >
-                                        <span>Открыть проект</span>
                                     </Button>
                                     <Button
                                         variant="danger"

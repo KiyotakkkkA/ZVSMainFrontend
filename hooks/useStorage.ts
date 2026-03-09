@@ -215,13 +215,31 @@ export type RunVectorEmbeddingsVariables = {
     documents: PreparedVectorFile[];
 };
 
+export type RunVectorEmbeddingsResult = {
+    status: number;
+    directorySize: number;
+    vectorizedChunks?: number;
+    error?: string;
+};
+
 export const useRunVectorEmbeddings = (
     options?: Omit<
-        UseMutationOptions<void, StorageError, RunVectorEmbeddingsVariables>,
+        UseMutationOptions<
+            RunVectorEmbeddingsResult,
+            StorageError,
+            RunVectorEmbeddingsVariables
+        >,
         "mutationFn"
     >,
 ) => {
-    return useMutation<void, StorageError, RunVectorEmbeddingsVariables>({
+    const queryClient = useQueryClient();
+    const { onSuccess: externalOnSuccess, ...rest } = options ?? {};
+
+    return useMutation<
+        RunVectorEmbeddingsResult,
+        StorageError,
+        RunVectorEmbeddingsVariables
+    >({
         mutationFn: async ({ vstoreUuid, documents }) => {
             if (!vstoreUuid) {
                 throw new Error("Не выбрано векторное хранилище");
@@ -261,24 +279,39 @@ export const useRunVectorEmbeddings = (
                 },
             );
 
-            if (!response.ok) {
-                let message = `Request failed with status ${response.status}`;
+            const data = await response.json();
 
-                try {
-                    const payload = (await response.json()) as {
-                        message?: string;
-                    };
-
-                    if (typeof payload?.message === "string") {
-                        message = payload.message;
-                    }
-                } catch {
-                    // Non-JSON response fallback.
-                }
+            if (!response.ok || data.success === false) {
+                const message =
+                    data?.message ||
+                    data?.error ||
+                    `Request failed with status ${response.status}`;
 
                 throw new Error(message);
             }
+
+            const result: RunVectorEmbeddingsResult = {
+                status: Number(data?.status ?? response.status),
+                directorySize: Number(data?.directory_size ?? 0),
+                vectorizedChunks: data?.vectorized_chunks,
+                error: data?.error,
+            };
+
+            if (result.status === 0) {
+                throw new Error(
+                    result.error || "Embedding failed with status 0",
+                );
+            }
+
+            return result;
         },
-        ...options,
+        ...rest,
+        onSuccess: (data, variables, onMutateResult, context) => {
+            void queryClient.invalidateQueries({
+                queryKey: VECTOR_STORAGES_QUERY_KEY,
+            });
+
+            externalOnSuccess?.(data, variables, onMutateResult, context);
+        },
     });
 };

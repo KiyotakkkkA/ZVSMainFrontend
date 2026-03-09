@@ -129,11 +129,11 @@ export default function StoragePage() {
 
     const runVectorEmbeddingsMutation = useRunVectorEmbeddings({
         onSuccess: () => {
-            toast.success({ title: "Индексация запущена" });
+            toast.success({ title: "Индексация завершена" });
         },
         onError: (error) => {
             toast.danger({
-                title: "Не удалось запустить индексацию",
+                title: "Индексация завершилась с ошибкой",
                 description: error.message,
             });
         },
@@ -225,13 +225,6 @@ export default function StoragePage() {
 
     const openSelectedFile = async () => {
         console.log("openSelectedFile fallback", { selectedFileId });
-    };
-
-    const openSelectedFileProject = () => {
-        console.log("openSelectedFileProject fallback", {
-            selectedFileId,
-            projectRef: selectedFileProjectRef,
-        });
     };
 
     const deleteSelectedFile = async () => {
@@ -388,7 +381,6 @@ export default function StoragePage() {
                     onOpenSelectedFile={() => {
                         void openSelectedFile();
                     }}
-                    onOpenSelectedFileProject={openSelectedFileProject}
                     onDeleteSelectedFile={() => {
                         void deleteSelectedFile();
                     }}

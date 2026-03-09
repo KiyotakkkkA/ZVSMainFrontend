@@ -17,7 +17,6 @@ export type VectorStorage = {
     name: string;
     createdAt: string;
     lastActiveAt: string;
-    dataPath: string;
     size: number;
     tags: string[];
 };

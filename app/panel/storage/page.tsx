@@ -49,7 +49,6 @@ const MOCK_VECTOR_STORAGES: VectorStorage[] = [
         name: "База договоров",
         createdAt: "2026-03-05T10:00:00.000Z",
         lastActiveAt: "2026-03-06T07:30:00.000Z",
-        dataPath: "C:/data/vectors/contracts/index.faiss",
         size: 93_184_000,
         tags: ["contracts", "legal"],
     },
@@ -58,7 +57,6 @@ const MOCK_VECTOR_STORAGES: VectorStorage[] = [
         name: "Справочник FAQ",
         createdAt: "2026-03-04T15:20:00.000Z",
         lastActiveAt: "2026-03-06T08:10:00.000Z",
-        dataPath: "C:/data/vectors/faq/index.faiss",
         size: 48_200_000,
         tags: ["faq", "support"],
     },
@@ -282,7 +280,6 @@ export default function StoragePage() {
             name: "Новое хранилище",
             createdAt: new Date().toISOString(),
             lastActiveAt: new Date().toISOString(),
-            dataPath: "C:/data/vectors/new/index.faiss",
             size: 0,
             tags: [],
         };

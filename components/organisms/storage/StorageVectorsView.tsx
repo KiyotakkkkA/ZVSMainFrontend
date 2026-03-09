@@ -11,6 +11,7 @@ import type {
     StoredFile,
     VectorStorage,
 } from "@/components/molecules/storage/types";
+import { Icon } from "@iconify/react";
 
 type StorageVectorsViewProps = {
     vectorSearchQuery: string;
@@ -135,42 +136,52 @@ export const StorageVectorsView = ({
                             <Button
                                 variant="success"
                                 shape="rounded-full"
-                                className="h-8 px-3 text-xs"
+                                className="h-8 px-3 text-xs gap-2"
                                 onClick={onRunVectorization}
                             >
+                                <Icon
+                                    icon="mdi:play"
+                                    width={18}
+                                    className="text-main-900"
+                                />
                                 <span className="text-main-900">Индекс</span>
                             </Button>
                             <Button
                                 variant="secondary"
                                 shape="rounded-full"
-                                className="h-8 px-3 text-xs"
+                                className="h-8 px-3 text-xs gap-2"
                                 onClick={onAddFilesFromExplorer}
                                 disabled={isUploading}
                             >
+                                <Icon icon="mdi:upload" width={18} />
                                 <span>Добавить файл</span>
                             </Button>
                             <Button
                                 variant="secondary"
                                 shape="rounded-full"
-                                className="h-8 px-3 text-xs"
+                                className="h-8 px-3 text-xs gap-2"
+                                disabled
                                 onClick={onOpenStorageFilesPick}
                             >
+                                <Icon icon="mdi:storage" width={18} />
                                 <span>Из хранилища</span>
                             </Button>
                             <Button
                                 variant="primary"
                                 shape="rounded-full"
-                                className="h-8 px-3 text-xs"
+                                className="h-8 px-3 text-xs gap-2"
                                 onClick={onCreateVectorStorage}
                             >
+                                <Icon icon="mdi:plus" width={18} />
                                 <span>Создать новое</span>
                             </Button>
                             <Button
                                 variant="danger"
                                 shape="rounded-full"
-                                className="h-8 px-3 text-xs"
+                                className="h-8 px-3 text-xs gap-2"
                                 onClick={onOpenDeleteConfirmModal}
                             >
+                                <Icon icon="mdi:trash-can-outline" width={18} />
                                 <span>Удалить</span>
                             </Button>
                         </div>
@@ -249,11 +260,6 @@ export const StorageVectorsView = ({
                                 <p className="text-main-400">Размер</p>
                                 <p className="text-main-200">
                                     {formatFileSize(selectedVectorStorage.size)}
-                                </p>
-                                <p className="text-main-400">Файл индекса</p>
-                                <p className="break-all text-main-200">
-                                    {selectedVectorStorage.dataPath ||
-                                        "Не указана"}
                                 </p>
                                 <p className="text-main-400">
                                     Последняя активность

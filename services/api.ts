@@ -95,7 +95,6 @@ const doRefresh = async (): Promise<string> => {
     userStore.setSession(
         session.accessToken,
         session.refreshToken ?? refreshToken,
-        session.user ?? userStore.user,
     );
 
     return session.accessToken;
@@ -163,7 +162,6 @@ export type AuthUser = {
 export type AuthSessionResponse = {
     accessToken: string;
     refreshToken: string;
-    user?: AuthUser;
     [key: string]: unknown;
 };
 

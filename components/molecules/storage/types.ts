@@ -18,7 +18,7 @@ export type VectorStorage = {
     createdAt: string;
     lastActiveAt: string;
     size: number;
-    tags: string[];
+    tags: Array<{ id: string; name: string }>;
 };
 
 export type PreparedVectorFile = {

@@ -5,7 +5,7 @@ export type VectorStorageDTO = {
     createdAt: string;
     lastActiveAt: string;
     size: number;
-    tags: string[];
+    tags: VectorStorageTagDTO[];
 };
 
 export type VectorStorageTagDTO = {
@@ -20,7 +20,7 @@ export type CreateVectorStorageBody = {
 
 export type UpdateVectorStorageBody = {
     name: string;
-    tagIds: string[];
+    tagIds?: string[];
 };
 
 export type CreateVectorStorageTagBody = {

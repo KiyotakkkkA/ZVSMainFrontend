@@ -70,12 +70,25 @@ export const StorageVectorsView = ({
         useState("");
     const [newVectorTagName, setNewVectorTagName] = useState("");
     const [draftTagsStorageId, setDraftTagsStorageId] = useState("");
-    const [draftTagIds, setDraftTagIds] = useState<string[]>([]);
+    const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-    const selectedTagIds =
+    const toTagIds = (tags: Array<{ id: string; name: string } | string>) =>
+        Array.from(
+            new Set(
+                tags
+                    .map((tag) =>
+                        typeof tag === "string" ? tag : (tag?.id ?? ""),
+                    )
+                    .filter((tagId) => Boolean(tagId)),
+            ),
+        );
+
+    const storageTagIds = toTagIds(selectedVectorStorage?.tags ?? []);
+
+    const effectiveSelectedTagIds =
         draftTagsStorageId === selectedVectorStorageId
-            ? draftTagIds
-            : (selectedVectorStorage?.tags ?? []);
+            ? selectedTagIds
+            : storageTagIds;
 
     const createVectorStorageMutation = useCreateVectorStorage({
         onSuccess: (created) => {
@@ -83,7 +96,7 @@ export const StorageVectorsView = ({
             onSelectVectorStorage(created.id, created.name);
             setEditableVectorStorageName(created.name);
             setDraftTagsStorageId(created.id);
-            setDraftTagIds(created.tags ?? []);
+            setSelectedTagIds(toTagIds(created.tags ?? []));
         },
         onError: (error) => {
             toast.danger({
@@ -107,6 +120,38 @@ export const StorageVectorsView = ({
         },
     });
 
+    const updateVectorStorageData = ({
+        name,
+        tagIds,
+    }: {
+        name?: string;
+        tagIds?: string[];
+    }) => {
+        if (!selectedVectorStorageId) return;
+
+        const nextName =
+            (name ?? editableVectorStorageName.trim()) ||
+            selectedVectorStorage?.name;
+
+        if (!nextName) {
+            toast.warning({ title: "Укажите название хранилища" });
+            return;
+        }
+
+        const nextTagIds = Array.from(
+            new Set((tagIds ?? effectiveSelectedTagIds).filter(Boolean)),
+        );
+
+        setDraftTagsStorageId(selectedVectorStorageId);
+        setSelectedTagIds(nextTagIds);
+
+        updateVectorStorageMutation.mutate({
+            id: selectedVectorStorageId,
+            name: nextName,
+            tagIds: nextTagIds,
+        });
+    };
+
     const createVectorStorageTagsMutation = useCreateVectorStorageTags({
         onSuccess: (createdTag) => {
             if (!selectedVectorStorageId) {
@@ -114,7 +159,7 @@ export const StorageVectorsView = ({
                 return;
             }
 
-            const currentTagIds = selectedTagIds;
+            const currentTagIds = effectiveSelectedTagIds;
             const nextTagIds = Array.from(
                 new Set([...currentTagIds, createdTag.id]),
             );
@@ -128,14 +173,10 @@ export const StorageVectorsView = ({
                 return;
             }
 
-            updateVectorStorageMutation.mutate({
-                id: selectedVectorStorageId,
+            updateVectorStorageData({
                 name: nextName,
                 tagIds: nextTagIds,
             });
-
-            setDraftTagsStorageId(selectedVectorStorageId);
-            setDraftTagIds(nextTagIds);
 
             setNewVectorTagName("");
             toast.success({ title: "Тег создан и назначен" });
@@ -154,15 +195,8 @@ export const StorageVectorsView = ({
         const nextName =
             editableVectorStorageName.trim() || selectedVectorStorage?.name;
 
-        if (!nextName) {
-            toast.warning({ title: "Укажите название хранилища" });
-            return;
-        }
-
-        updateVectorStorageMutation.mutate({
-            id: selectedVectorStorageId,
+        updateVectorStorageData({
             name: nextName,
-            tagIds: selectedTagIds,
         });
     };
 
@@ -180,36 +214,8 @@ export const StorageVectorsView = ({
     const updateSelectedStorageTags = (nextTagIds: string[]) => {
         if (!selectedVectorStorageId) return;
 
-        const nextName =
-            editableVectorStorageName.trim() || selectedVectorStorage?.name;
-
-        if (!nextName) return;
-
-        const currentTagIds = selectedTagIds;
-        let normalizedTagIds = nextTagIds;
-
-        // Some selector builds emit only the changed tag instead of full selection.
-        if (nextTagIds.length <= 1 && currentTagIds.length > 0) {
-            const changedTagId = nextTagIds[0];
-
-            if (!changedTagId) {
-                normalizedTagIds = [];
-            } else if (currentTagIds.includes(changedTagId)) {
-                normalizedTagIds = currentTagIds.filter(
-                    (tagId) => tagId !== changedTagId,
-                );
-            } else {
-                normalizedTagIds = [...currentTagIds, changedTagId];
-            }
-        }
-
-        setDraftTagsStorageId(selectedVectorStorageId);
-        setDraftTagIds(normalizedTagIds);
-
-        updateVectorStorageMutation.mutate({
-            id: selectedVectorStorageId,
-            name: nextName,
-            tagIds: normalizedTagIds,
+        updateVectorStorageData({
+            tagIds: nextTagIds,
         });
     };
 
@@ -251,8 +257,8 @@ export const StorageVectorsView = ({
                                             vectorStorage.name,
                                         );
                                         setDraftTagsStorageId(vectorStorage.id);
-                                        setDraftTagIds(
-                                            vectorStorage.tags ?? [],
+                                        setSelectedTagIds(
+                                            toTagIds(vectorStorage.tags ?? []),
                                         );
                                         onSelectVectorStorage(
                                             vectorStorage.id,
@@ -400,7 +406,7 @@ export const StorageVectorsView = ({
                                 <AutoFillSelector
                                     className="mt-3"
                                     options={vectorTagOptions}
-                                    value={selectedTagIds}
+                                    value={effectiveSelectedTagIds}
                                     onChange={updateSelectedStorageTags}
                                     placeholder="Назначьте теги хранилищу"
                                 />

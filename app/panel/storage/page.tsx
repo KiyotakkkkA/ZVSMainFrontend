@@ -188,12 +188,17 @@ export default function StoragePage() {
 
     const containedFiles = useMemo(() => {
         if (!selectedVectorStorage) return [];
+
+        const tagNames = selectedVectorStorage.tags.map((tag) =>
+            (typeof tag === "string" ? tag : (tag.name ?? "")).toLowerCase(),
+        );
+
         return files.filter((file) => {
             const fileName = file.originalName.toLowerCase();
-            if (selectedVectorStorage.tags.includes("contracts")) {
+            if (tagNames.includes("contracts")) {
                 return fileName.includes("contract");
             }
-            if (selectedVectorStorage.tags.includes("faq")) {
+            if (tagNames.includes("faq")) {
                 return fileName.includes("faq") || fileName.includes("base");
             }
             return true;

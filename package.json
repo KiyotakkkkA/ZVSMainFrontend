@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
+    "mobx": "^6.15.0",
+    "mobx-react-lite": "^4.1.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

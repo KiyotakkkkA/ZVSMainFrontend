@@ -5,6 +5,7 @@ import Logo from "@/public/images/logo.svg";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, PrettyBR } from "../atoms";
+import { observer } from "mobx-react-lite";
 
 const navigationTabs = [
     {
@@ -21,7 +22,7 @@ const navigationTabs = [
     },
 ];
 
-export const DashboardNavPanel = () => {
+const DashboardNavPanelComponent = () => {
     const path = usePathname();
     const router = useRouter();
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -107,3 +108,5 @@ export const DashboardNavPanel = () => {
         </aside>
     );
 };
+
+export const DashboardNavPanel = observer(DashboardNavPanelComponent);

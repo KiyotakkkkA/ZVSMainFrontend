@@ -4,21 +4,69 @@ import Image from "next/image";
 import { useState } from "react";
 import Logo from "@/public/images/logo.svg";
 import { Button, Card, InputCheckbox, InputSmall } from "@/components/atoms";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRegister } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 
 export default function LoginPage() {
+    const router = useRouter();
+    const toast = useToast();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [passwordConfirm, setPasswordConfirm] = useState("");
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const registerMutation = useRegister();
 
-    const handleLogin = (event: React.SubmitEvent<HTMLFormElement>) => {
+    const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        console.log("login submit fallback", {
-            email,
-            hasPassword: password.length > 0,
-            hasPasswordConfirm: passwordConfirm.length > 0,
-            termsAccepted,
-        });
+
+        if (!email || !password || !passwordConfirm) {
+            toast.warning({
+                title: "Заполните поля",
+                description: "Email, пароль и подтверждение обязательны.",
+            });
+            return;
+        }
+
+        if (password !== passwordConfirm) {
+            toast.warning({
+                title: "Пароли не совпадают",
+                description: "Проверьте введённые данные.",
+            });
+            return;
+        }
+
+        if (!termsAccepted) {
+            toast.warning({
+                title: "Подтвердите согласие",
+                description: "Нужно принять правила пользования сервисом.",
+            });
+            return;
+        }
+
+        try {
+            await registerMutation.mutateAsync({
+                email,
+                password,
+                passwordConfirm,
+            });
+            toast.success({
+                title: "Аккаунт создан",
+                description: "Переходим в панель.",
+            });
+            router.push("/panel");
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Не удалось завершить регистрацию";
+
+            toast.danger({
+                title: "Ошибка регистрации",
+                description: message,
+            });
+        }
     };
 
     return (
@@ -125,9 +173,18 @@ export default function LoginPage() {
                         variant="primary"
                         shape="rounded-lg"
                         className="h-11 w-full text-sm"
+                        disabled={registerMutation.isPending}
                     >
-                        Зарегистрироватся
+                        {registerMutation.isPending
+                            ? "Регистрируем..."
+                            : "Зарегистрироватся"}
                     </Button>
+                    <Link
+                        href="/auth/login"
+                        className="text-xs hover:underline text-main-300"
+                    >
+                        Уже есть аккаунт?
+                    </Link>
                 </form>
             </Card>
         </>

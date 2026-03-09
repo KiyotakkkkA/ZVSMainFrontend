@@ -5,19 +5,47 @@ import { useState } from "react";
 import Logo from "@/public/images/logo.svg";
 import { Button, Card, InputCheckbox, InputSmall } from "@/components/atoms";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useLogin } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 
 export default function LoginPage() {
+    const router = useRouter();
+    const toast = useToast();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(true);
+    const loginMutation = useLogin();
 
-    const handleLogin = (event: React.SubmitEvent<HTMLFormElement>) => {
+    const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        console.log("login submit fallback", {
-            email,
-            hasPassword: password.length > 0,
-            rememberMe,
-        });
+
+        if (!email || !password) {
+            toast.warning({
+                title: "Заполните поля",
+                description: "Укажите email и пароль.",
+            });
+            return;
+        }
+
+        try {
+            await loginMutation.mutateAsync({ email, password });
+            toast.success({
+                title: "Вход выполнен",
+                description: "Переходим в панель.",
+            });
+            router.push("/panel");
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Не удалось выполнить вход";
+
+            toast.danger({
+                title: "Ошибка входа",
+                description: message,
+            });
+        }
     };
 
     return (
@@ -117,8 +145,9 @@ export default function LoginPage() {
                         variant="primary"
                         shape="rounded-lg"
                         className="h-11 w-full text-sm"
+                        disabled={loginMutation.isPending}
                     >
-                        Войти
+                        {loginMutation.isPending ? "Входим..." : "Войти"}
                     </Button>
                     <Link
                         href="/auth/register"

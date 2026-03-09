@@ -6,9 +6,11 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <div className="flex gap-4 p-3">
+        <div className="flex min-h-screen gap-4 p-3">
             <DashboardNavPanel />
-            {children}
+            <main className="min-h-[calc(100vh-1.5rem)] flex-1">
+                {children}
+            </main>
         </div>
     );
 }

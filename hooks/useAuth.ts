@@ -10,7 +10,10 @@ import {
 import {
     api,
     type AuthSession,
-    type AuthSessionResponse,
+    type LoginSessionResponse,
+    type RegisterSessionResponse,
+    type CodeReceiveBody,
+    type CodeVerifyBody,
     type AuthSessionsResponse,
     type AuthUser,
     type LoginBody,
@@ -23,8 +26,8 @@ export const AUTH_SESSIONS_QUERY_KEY = ["auth", "sessions"] as const;
 
 type AuthError = Error;
 
-type AuthMutationOptions<TPayload> = Omit<
-    UseMutationOptions<AuthSessionResponse, AuthError, TPayload>,
+type AuthMutationOptions<TData, TPayload> = Omit<
+    UseMutationOptions<TData, AuthError, TPayload>,
     "mutationFn"
 >;
 
@@ -53,36 +56,55 @@ const toAuthUser = (value: unknown): AuthUser | null => {
     };
 };
 
-export const useRegister = (options?: AuthMutationOptions<RegisterBody>) => {
-    const queryClient = useQueryClient();
+export const useCodeSend = (
+    options?: AuthMutationOptions<void, CodeReceiveBody>,
+) => {
     const { onSuccess: externalOnSuccess, ...restOptions } = options ?? {};
 
-    return useMutation<AuthSessionResponse, AuthError, RegisterBody>({
-        mutationFn: api.auth.register,
+    return useMutation<void, AuthError, CodeReceiveBody>({
+        mutationFn: api.auth.codeRecieve,
         ...restOptions,
         onSuccess: (data, variables, onMutateResult, context) => {
-            const user = toAuthUser(data.user);
-
-            userStore.setSession(data.accessToken, data.refreshToken, user);
-
-            if (user) {
-                queryClient.setQueryData(AUTH_ME_QUERY_KEY, user);
-            } else {
-                void queryClient.invalidateQueries({
-                    queryKey: AUTH_ME_QUERY_KEY,
-                });
-            }
-
             externalOnSuccess?.(data, variables, onMutateResult, context);
         },
     });
 };
 
-export const useLogin = (options?: AuthMutationOptions<LoginBody>) => {
+export const useCodeVerify = (
+    options?: AuthMutationOptions<void, CodeVerifyBody>,
+) => {
+    const { onSuccess: externalOnSuccess, ...restOptions } = options ?? {};
+
+    return useMutation<void, AuthError, CodeVerifyBody>({
+        mutationFn: api.auth.codeVerify,
+        ...restOptions,
+        onSuccess: (data, variables, onMutateResult, context) => {
+            externalOnSuccess?.(data, variables, onMutateResult, context);
+        },
+    });
+};
+
+export const useRegister = (
+    options?: AuthMutationOptions<RegisterSessionResponse, RegisterBody>,
+) => {
+    const { onSuccess: externalOnSuccess, ...restOptions } = options ?? {};
+
+    return useMutation<RegisterSessionResponse, AuthError, RegisterBody>({
+        mutationFn: api.auth.register,
+        ...restOptions,
+        onSuccess: (data, variables, onMutateResult, context) => {
+            externalOnSuccess?.(data, variables, onMutateResult, context);
+        },
+    });
+};
+
+export const useLogin = (
+    options?: AuthMutationOptions<LoginSessionResponse, LoginBody>,
+) => {
     const queryClient = useQueryClient();
     const { onSuccess: externalOnSuccess, ...restOptions } = options ?? {};
 
-    return useMutation<AuthSessionResponse, AuthError, LoginBody>({
+    return useMutation<LoginSessionResponse, AuthError, LoginBody>({
         mutationFn: api.auth.login,
         ...restOptions,
         onSuccess: (data, variables, onMutateResult, context) => {

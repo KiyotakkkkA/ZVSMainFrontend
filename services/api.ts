@@ -100,7 +100,7 @@ const doRefresh = async (): Promise<string> => {
         data: { refreshToken },
     });
 
-    const session = await parseResponse<AuthSessionResponse>(response);
+    const session = await parseResponse<LoginSessionResponse>(response);
 
     userStore.setSession(
         session.accessToken,
@@ -169,9 +169,14 @@ export type AuthUser = {
     status: string;
 };
 
-export type AuthSessionResponse = {
+export type LoginSessionResponse = {
     accessToken: string;
     refreshToken: string;
+    [key: string]: unknown;
+};
+
+export type RegisterSessionResponse = {
+    verificationToken: string;
     [key: string]: unknown;
 };
 
@@ -179,6 +184,17 @@ export type RegisterBody = {
     email: string;
     password: string;
     passwordConfirm: string;
+};
+
+export type CodeReceiveBody = {
+    email: string;
+    token: string;
+};
+
+export type CodeVerifyBody = {
+    email: string;
+    code: string;
+    token: string;
 };
 
 export type LoginBody = {
@@ -226,19 +242,30 @@ export type {
 export const api = {
     auth: {
         register: (payload: RegisterBody) =>
-            request<AuthSessionResponse>({
+            request<RegisterSessionResponse>({
                 method: "POST",
                 endpoint: "/auth/register",
                 data: payload,
             }),
         login: (payload: LoginBody) =>
-            request<AuthSessionResponse>({
+            request<LoginSessionResponse>({
                 method: "POST",
                 endpoint: "/auth/login",
                 data: payload,
             }),
+        codeRecieve: ({ email, token }: CodeReceiveBody) =>
+            request<void>({
+                method: "GET",
+                endpoint: `/auth/verification/code?email=${email}&token=${token}`,
+            }),
+        codeVerify: ({ email, code, token }: CodeVerifyBody) =>
+            request<void>({
+                method: "POST",
+                endpoint: `/auth/verification/code`,
+                data: { email, code, token },
+            }),
         refresh: (payload: RefreshBody) =>
-            request<AuthSessionResponse>({
+            request<LoginSessionResponse>({
                 method: "POST",
                 endpoint: "/auth/refresh",
                 data: payload,

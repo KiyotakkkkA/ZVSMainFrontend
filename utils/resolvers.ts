@@ -1,3 +1,12 @@
+import { UserRoles } from "@/services/api";
+
+const roleNames: Record<UserRoles, string> = {
+    ROOT: "Суперпользователь",
+    ADMIN: "Администратор",
+    USER: "Пользователь",
+    VIEWONLY: "Гость",
+};
+
 export const ipFormatResolver = (raw: string): string => {
     let ip = raw.replace(/^::ffff:/, "");
     if (ip === "::1") ip = "127.0.0.1";
@@ -24,4 +33,8 @@ export const timeAgoResolver = (iso: string) => {
     if (hours < 24) return `${hours} ч. назад`;
     const days = Math.floor(hours / 24);
     return `${days} дн. назад`;
+};
+
+export const roleNameResolver = (role: UserRoles) => {
+    return roleNames[role] || role;
 };

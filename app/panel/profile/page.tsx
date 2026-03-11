@@ -9,6 +9,7 @@ import {
     timeAgoResolver,
     dateFormatResolver,
     ipFormatResolver,
+    roleNameResolver,
 } from "@/utils/resolvers";
 import type { AuthSession } from "@/services/api";
 
@@ -254,19 +255,11 @@ export default function PanelProfilePage() {
                                 {user?.email ?? "Пользователь"}
                             </h1>
                             <div className="mt-1 flex flex-wrap items-center gap-2">
-                                {user?.roles?.map((role) => (
-                                    <span
-                                        key={role}
-                                        className="inline-flex items-center gap-1 rounded-md bg-main-700/50 px-2 py-0.5 text-[11px] uppercase tracking-wider text-main-300"
-                                    >
-                                        <Icon
-                                            icon="mdi:shield-account-outline"
-                                            width={12}
-                                            height={12}
-                                        />
-                                        {role}
+                                {user?.role && (
+                                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-900/40 px-2 py-0.5 text-[11px] uppercase tracking-wider text-blue-400">
+                                        {roleNameResolver(user.role)}
                                     </span>
-                                ))}
+                                )}
                                 {user?.status && (
                                     <span className="inline-flex items-center gap-1 rounded-md bg-emerald-900/40 px-2 py-0.5 text-[11px] uppercase tracking-wider text-emerald-400">
                                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />

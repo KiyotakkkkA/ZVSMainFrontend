@@ -162,10 +162,12 @@ export async function DELETE(endpoint: string) {
     return await requestRaw({ method: "DELETE", endpoint });
 }
 
+export type UserRoles = "VIEWONLY" | "USER" | "ADMIN" | "ROOT";
+
 export type AuthUser = {
     id?: string;
     email: string;
-    roles: string[];
+    role: UserRoles;
     status: string;
 };
 

@@ -18,6 +18,7 @@ import {
     type AuthUser,
     type LoginBody,
     type RegisterBody,
+    UserRoles,
 } from "@/services/api";
 import { userStore } from "@/stores/userStore";
 
@@ -38,21 +39,11 @@ const toAuthUser = (value: unknown): AuthUser | null => {
 
     const candidate = value as Partial<AuthUser>;
 
-    if (
-        typeof candidate.email !== "string" ||
-        !Array.isArray(candidate.roles) ||
-        typeof candidate.status !== "string"
-    ) {
-        return null;
-    }
-
     return {
         id: typeof candidate.id === "string" ? candidate.id : undefined,
-        email: candidate.email,
-        roles: candidate.roles.filter(
-            (role): role is string => typeof role === "string",
-        ),
-        status: candidate.status,
+        email: candidate.email || "",
+        role: candidate.role as UserRoles,
+        status: candidate.status || "active",
     };
 };
 
